@@ -1,0 +1,11 @@
+*.db
+*.db-shm
+*.db-wal
+uploads/
+__pycache__/
+*.pyc
+.DS_Store
+nohup.out
+launchd.*
+*.bak
+*.bak.*

@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>{{ page.title if page else 'Wiki' }} - Wiki</title>
+<style>
+:root {
+    --sidebar-width: 260px;
+    --header-height: 48px;
+    --primary: #4a90d9;
+    --primary-dark: #357abd;
+    --bg: #f8f9fa;
+    --sidebar-bg: #1a1a2e;
+    --sidebar-text: #e0e0e0;
+    --border: #e0e0e0;
+    --text: #333;
+    --text-light: #888;
+    --code-bg: #f5f5f5;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    height: 100vh;
+    display: flex;
+    overflow: hidden;
+}
+a { color: var(--primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.sidebar {
+    width: var(--sidebar-width);
+    background: var(--sidebar-bg);
+    color: var(--sidebar-text);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+}
+.sidebar-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.sidebar-header h2 { font-size: 16px; color: #fff; }
+.sidebar-header .actions { display: flex; gap: 6px; }
+.sidebar-btn {
+    background: none; border: 1px solid rgba(255,255,255,0.2);
+    color: var(--sidebar-text); padding: 4px 10px; border-radius: 4px;
+    cursor: pointer; font-size: 12px; transition: all 0.2s;
+}
+.sidebar-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.4); }
+.page-tree { flex: 1; overflow-y: auto; padding: 8px 0; }
+.tree-node { cursor: pointer; }
+.tree-item a {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 16px 6px calc(16px + var(--depth, 0) * 20px);
+    color: var(--sidebar-text);
+    border-left: 3px solid transparent;
+    transition: background 0.15s;
+}
+.tree-item a:hover { background: rgba(255,255,255,0.08); text-decoration: none; }
+.tree-item.active a { background: rgba(74,144,217,0.2); border-left-color: var(--primary); color: #fff; }
+.tree-item .icon { font-size: 14px; width: 18px; text-align: center; flex-shrink: 0; }
+.tree-item .title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tree-item .tree-actions { display: none; gap: 4px; }
+.tree-item:hover .tree-actions { display: flex; }
+.tree-action { background: none; border: none; color: var(--sidebar-text); cursor: pointer; font-size: 11px; padding: 2px; opacity: 0.6; }
+.tree-action:hover { opacity: 1; }
+.sidebar-footer {
+    padding: 10px 16px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    font-size: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.sidebar-footer .user-info { color: var(--text-light); }
+.sidebar-footer a { color: var(--text-light); }
+.main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.toolbar {
+    height: var(--header-height);
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    gap: 12px;
+    flex-shrink: 0;
+}
+.toolbar .breadcrumb { flex: 1; font-size: 13px; color: var(--text-light); }
+.toolbar .breadcrumb a { color: var(--text-light); }
+.toolbar-actions { display: flex; gap: 8px; }
+.tool-btn {
+    padding: 6px 14px; border: 1px solid var(--border); border-radius: 4px;
+    background: #fff; cursor: pointer; font-size: 13px; color: var(--text);
+    transition: all 0.15s;
+}
+.tool-btn:hover { background: var(--bg); border-color: #ccc; }
+.tool-btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+.tool-btn.primary:hover { background: var(--primary-dark); }
+.tool-btn.danger { color: #e74c3c; border-color: #e74c3c; }
+.tool-btn.danger:hover { background: #fee; }
+.content-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 30px 40px;
+    max-width: 960px;
+    margin: 0 auto;
+    width: 100%;
+}
+.page-content { line-height: 1.8; }
+.page-content h1 { font-size: 28px; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.page-content h2 { font-size: 22px; margin-top: 28px; margin-bottom: 12px; }
+.page-content h3 { font-size: 18px; margin-top: 20px; margin-bottom: 10px; }
+.page-content p { margin-bottom: 14px; }
+.page-content ul, .page-content ol { margin: 10px 0; padding-left: 24px; }
+.page-content li { margin-bottom: 4px; }
+.page-content code { background: var(--code-bg); padding: 2px 6px; border-radius: 3px; font-size: 0.9em; font-family: 'SF Mono', 'Fira Code', monospace; }
+.page-content pre { background: var(--code-bg); padding: 14px; border-radius: 6px; overflow-x: auto; margin: 14px 0; }
+.page-content pre code { background: none; padding: 0; }
+.page-content blockquote { border-left: 4px solid var(--primary); padding: 8px 16px; margin: 14px 0; background: #f0f4fa; color: #555; }
+.page-content img { max-width: 100%; border-radius: 6px; margin: 10px 0; }
+.page-content hr { margin: 20px 0; border: none; border-top: 1px solid var(--border); }
+.page-content table { border-collapse: collapse; margin: 14px 0; }
+.page-content th, .page-content td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; }
+.page-content th { background: var(--bg); font-weight: 600; }
+.empty-state { text-align: center; padding: 80px 20px; color: var(--text-light); }
+.empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+.empty-state h3 { margin-bottom: 8px; color: var(--text); }
+.edit-container { height: 100%; display: flex; flex-direction: column; }
+.edit-tabs { display: flex; border-bottom: 1px solid var(--border); background: #fff; }
+.edit-tab { padding: 10px 20px; cursor: pointer; border: none; background: none; font-size: 14px; color: var(--text-light); border-bottom: 2px solid transparent; }
+.edit-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+.edit-textarea { flex: 1; width: 100%; border: none; resize: none; padding: 20px; font-family: 'SF Mono', 'Fira Code', 'Menlo', monospace; font-size: 14px; line-height: 1.7; outline: none; }
+.edit-preview { flex: 1; padding: 20px; overflow-y: auto; line-height: 1.8; }
+.edit-richtext { flex: 1; width: 100%; padding: 20px; overflow-y: auto; line-height: 1.8; font-size: 15px; outline: none; border: none; background: #fff; }
+.edit-richtext img { max-width: min(80%, 800px); border-radius: 6px; margin: 8px 0; box-shadow: 0 1px 4px rgba(0,0,0,0.1); border: 1px dashed transparent; user-select: none; }
+.edit-richtext img.img-resizing {
+    resize: both;
+    overflow: hidden;
+    max-width: 100%;
+    border: 2px solid transparent;
+    cursor: se-resize;
+}
+.edit-richtext img.img-resizing:hover,
+.edit-richtext img.img-resizing:active {
+    border-color: #3498db;
+}
+.edit-richtext:focus { box-shadow: inset 0 0 0 1px var(--primary); }
+.edit-richtext td, .edit-richtext th { min-height: 28px; text-align: left; }
+.edit-richtext td br, .edit-richtext th br { display: block; content: ''; margin: 6px 0; }
+.edit-richtext th { font-weight: normal; }
+.edit-toolbar { display: flex; align-items: center; gap: 2px; padding: 6px 12px; border-bottom: 1px solid var(--border); background: #f8f9fa; flex-wrap: wrap; }
+.edit-toolbar button { padding: 4px 10px; border: 1px solid transparent; border-radius: 4px; background: none; cursor: pointer; font-size: 13px; color: #555; }
+.edit-toolbar button:hover { background: #e9ecef; border-color: #dee2e6; }
+.toolbar-sep { width: 1px; height: 20px; background: #dee2e6; margin: 0 4px; }
+.edit-footer { padding: 12px 20px; border-top: 1px solid var(--border); background: #fff; display: flex; gap: 8px; align-items: center; }
+.edit-footer input { flex: 1; padding: 6px 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 13px; }
+.modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+.modal-overlay.show { display: flex; }
+.modal { background: #fff; border-radius: 12px; width: 520px; max-height: 80vh; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+.modal-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.modal-header h3 { font-size: 16px; }
+.modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-light); }
+.modal-body { padding: 16px 20px; max-height: 400px; overflow-y: auto; }
+.modal-footer { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
+.page-meta { color: var(--text-light); font-size: 12px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+.page-meta span { margin-right: 16px; }
+.history-item { padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.toast { position: fixed; bottom: 20px; right: 20px; padding: 12px 20px; background: #333; color: #fff; border-radius: 8px; font-size: 14px; z-index: 2000; opacity: 0; transform: translateY(10px); transition: all 0.3s; }
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.error { background: #e74c3c; }
+.toast.success { background: #27ae60; }
+.search-box { padding: 8px 12px; margin: 8px 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff; font-size: 13px; width: calc(100% - 24px); outline: none; }
+.search-box::placeholder { color: rgba(255,255,255,0.4); }
+.search-box:focus { border-color: var(--primary); background: rgba(255,255,255,0.15); }
+/* 隐藏侧边栏 */
+body.sidebar-collapsed .sidebar { display: none; }
+body.sidebar-collapsed .main { margin-left: 0; }
+#sidebarToggle { opacity: 0.7; transition: all 0.2s; }
+#sidebarToggle:hover { opacity: 1; }
+</style>
+</head>
+<body>
+<div class="sidebar">
+    <div class="sidebar-header">
+        <h2>📚 Wiki</h2>
+        <div class="actions">
+            <button class="sidebar-btn" onclick="showCreatePage()">+ 新建</button>
+        </div>
+    </div>
+    <input class="search-box" type="text" placeholder="搜索页面..." oninput="filterTree(this.value)">
+    <div class="page-tree" id="pageTree"></div>
+    <div class="sidebar-footer">
+        <span class="user-info">{{ session.display_name }}</span>
+        {% if session.is_admin %}
+        <a href="#" onclick="showUserManager(); return false">用户管理</a>
+        {% endif %}
+        <a href="javascript:void(0)" onclick="logout()">退出</a>
+    </div>
+</div>
+<div class="main">
+    <div class="toolbar">
+        <a href="http://192.168.1.11:5000/" class="tool-btn" id="homeBtn" title="返回主页" style="margin-right:4px;">🏠</a>
+        <button class="tool-btn" id="sidebarToggle" onclick="toggleSidebar()" title="隐藏/显示左侧导航">▤ 收起</button>
+        <div class="breadcrumb" id="breadcrumb">
+            <a href="javascript:void(0)" onclick="navigatePage('home')">Wiki</a>
+            {% if page %}
+            <span> / </span><span id="pageTitle">{{ page.title }}</span>
+            {% endif %}
+        </div>
+        <div class="toolbar-actions">
+            <button class="tool-btn" onclick="editPage()" id="btnEdit" {% if not page %}disabled{% endif %}>✏️ 编辑</button>
+            <button class="tool-btn" onclick="showHistory()" id="btnHistory" {% if not page %}disabled{% endif %}>📋 历史</button>
+            <button class="tool-btn" onclick="showPermissions()" id="btnPerms" {% if not page %}disabled{% endif %}>🔒 权限</button>
+            <button class="tool-btn danger" onclick="deletePage()" id="btnDelete" {% if not page %}disabled{% endif %}>🗑️ 删除</button>
+        </div>
+    </div>
+    <div class="content-area" id="viewMode">
+        {% if page %}
+        <div class="page-content">{{ page.content_html | safe }}</div>
+        <div class="page-meta">
+            <span>创建于: {{ page.created_at }}</span>
+            <span>更新于: {{ page.updated_at }}</span>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="icon">📄</div>
+            <h3>页面不存在</h3>
+            <p>请从左侧选择一个页面，或 <a href="#" onclick="showCreatePage()">创建一个新页面</a></p>
+        </div>
+        {% endif %}
+    </div>
+    <div class="content-area" id="editMode" style="display:none; padding:0;">
+        <div class="edit-container">
+            <div class="edit-toolbar" id="toolbar">
+                <!-- 标题 -->
+                <select onchange="if(this.value)wrapTag(this.value);this.selectedIndex=0" title="标题">
+                    <option value="">标题</option>
+                    <option value="h1">H1 大标题</option>
+                    <option value="h2">H2 中标题</option>
+                    <option value="h3">H3 小标题</option>
+                    <option value="h4">H4 小小标题</option>
+                </select>
+                <span class="toolbar-sep"></span>
+                <!-- 粗斜体 -->
+                <button type="button" onclick="wrapTag('strong')" title="加粗"><b>B</b></button>
+                <button type="button" onclick="wrapTag('em')" title="斜体"><i>I</i></button>
+                <span class="toolbar-sep"></span>
+                <!-- 字体颜色 -->
+                <div style="position:relative;display:inline-block;" class="color-picker-wrap">
+                    <button type="button" onclick="toggleColorPicker(event,'font')" title="字体颜色" style="padding:4px 10px;border:1px solid transparent;border-radius:4px;background:none;cursor:pointer;font-size:13px;color:#555;">🎨</button>
+                    <div class="color-picker-panel" id="colorPickerFont" style="display:none;position:absolute;top:100%;left:0;z-index:999;background:#fff;border:1px solid #ddd;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.12);padding:6px;width:160px;"></div>
+                </div>
+                <!-- 字体大小 -->
+                <select onchange="if(this.value)document.execCommand('fontSize',false,this.value);this.selectedIndex=0" title="字体大小">
+                    <option value="">字号</option>
+                    <option value="1">极小</option>
+                    <option value="2">小</option>
+                    <option value="3">正常</option>
+                    <option value="4">大</option>
+                    <option value="5">较大</option>
+                    <option value="6">很大</option>
+                    <option value="7">极大</option>
+                </select>
+                <span class="toolbar-sep"></span>
+                <!-- 表格 -->
+                <button type="button" onclick="insertTable()" title="插入表格">⊞</button>
+                <button type="button" id="rowNumBtn" onclick="toggleRowNumbers()" title="表格行号" style="padding:4px 8px;border:1px solid transparent;border-radius:4px;background:none;cursor:pointer;font-size:12px;color:#999;">#行号</button>
+                <!-- 单元格颜色 -->
+                <div style="position:relative;display:inline-block;" class="color-picker-wrap">
+                    <button type="button" onclick="toggleColorPicker(event,'cell')" title="单元格背景色" style="padding:4px 10px;border:1px solid transparent;border-radius:4px;background:none;cursor:pointer;font-size:13px;color:#555;">⬜</button>
+                    <div class="color-picker-panel" id="colorPickerCell" style="display:none;position:absolute;top:100%;left:0;z-index:999;background:#fff;border:1px solid #ddd;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.12);padding:6px;width:160px;"></div>
+                </div>
+                <span class="toolbar-sep"></span>
+                <!-- 列表 + 引用 -->
+                <button type="button" onclick="insertUnorderedList()" title="无序列表">•</button>
+                <button type="button" onclick="insertOrderedList()" title="有序列表">1.</button>
+                <button type="button" onclick="wrapTag('blockquote')" title="引用">❝</button>
+                <button type="button" onclick="insertHr()" title="分割线">—</button>
+                <span class="toolbar-sep"></span>
+                <!-- 目录生成 -->
+                <button type="button" onclick="insertToc()" title="生成目录">📑 目录</button>
+            </div>
+            <div class="edit-richtext" id="editor" contenteditable="true"></div>
+            <div class="edit-footer">
+                <input type="text" id="editSummary" placeholder="修改摘要（可选）" maxlength="200">
+                <button class="tool-btn" onclick="cancelEdit()">取消</button>
+                <button class="tool-btn primary" onclick="savePage()">💾 保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="createModal">
+    <div class="modal">
+        <div class="modal-header"><h3>📄 新建页面</h3><button class="modal-close" onclick="closeModal('createModal')">&times;</button></div>
+        <div class="modal-body">
+            <div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-size:13px;color:#888;">标题</label><input type="text" id="newTitle" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:4px;font-size:14px;" placeholder="页面标题" autofocus></div>
+            <div style="margin-bottom:12px;"><label style="display:block;margin-bottom:4px;font-size:13px;color:#888;">父级目录（可选）</label><select id="newParent" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:4px;font-size:14px;"><option value="">根目录</option></select></div>
+            <div><label style="display:block;margin-bottom:4px;font-size:13px;color:#888;">URL 标识（可选，自动生成）</label><input type="text" id="newSlug" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:4px;font-size:14px;" placeholder="自动生成"></div>
+        </div>
+        <div class="modal-footer"><button class="tool-btn" onclick="closeModal('createModal')">取消</button><button class="tool-btn primary" onclick="createPage()">创建</button></div>
+    </div>
+</div>
+<div class="modal-overlay" id="permModal">
+    <div class="modal">
+        <div class="modal-header"><h3>🔒 页面权限</h3><button class="modal-close" onclick="closeModal('permModal')">&times;</button></div>
+        <div class="modal-body" id="permBody"></div>
+        <div class="modal-footer"><button class="tool-btn" onclick="closeModal('permModal')">关闭</button></div>
+    </div>
+</div>
+<div class="modal-overlay" id="historyModal">
+    <div class="modal">
+        <div class="modal-header"><h3>📋 版本历史</h3><button class="modal-close" onclick="closeModal('historyModal')">&times;</button></div>
+        <div class="modal-body" id="historyBody"></div>
+        <div class="modal-footer"><button class="tool-btn" onclick="closeModal('historyModal')">关闭</button></div>
+    </div>
+</div>
+<div class="modal-overlay" id="userModal">
+    <div class="modal" style="width:600px;">
+        <div class="modal-header"><h3>👤 用户管理</h3><button class="modal-close" onclick="closeModal('userModal')">&times;</button></div>
+        <div class="modal-body" id="userBody"></div>
+        <div class="modal-footer"><button class="tool-btn" onclick="closeModal('userModal')">关闭</button></div>
+    </div>
+</div>
+<!-- 插入表格弹窗 -->
+<div class="modal-overlay" id="tableModal">
+    <div class="modal" style="width:400px;">
+        <div class="modal-header"><h3>⊞ 插入表格</h3><button class="modal-close" onclick="closeModal('tableModal')">&times;</button></div>
+        <div class="modal-body">
+            <div style="display:flex;gap:20px;align-items:center;margin-bottom:16px;">
+                <div><label style="display:block;font-size:13px;color:#888;margin-bottom:4px;">行数</label><input type="number" id="tableRows" value="3" min="1" max="50" style="width:80px;padding:6px 8px;border:1px solid #ddd;border-radius:4px;font-size:14px;"></div>
+                <div><label style="display:block;font-size:13px;color:#888;margin-bottom:4px;">列数</label><input type="number" id="tableCols" value="3" min="1" max="20" style="width:80px;padding:6px 8px;border:1px solid #ddd;border-radius:4px;font-size:14px;"></div>
+            </div>
+            <div id="tablePreview" style="border:1px solid #dee2e6;border-radius:6px;overflow:hidden;"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="tool-btn" onclick="closeModal('tableModal')">取消</button>
+            <button class="tool-btn primary" onclick="confirmInsertTable()">✅ 插入</button>
+        </div>
+    </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+let currentPageSlug = '{{ page_slug }}';
+let currentUserId = {{ current_user_id }};
+let allPages = [];
+const USERS_JSON = {{ users_json | safe }};
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadTree();
+    loadPageContent(currentPageSlug);
+    const editor = document.getElementById('editor');
+    editor.addEventListener('paste', handlePaste);
+    editor.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); savePage(); }
+    });
+});
+
+// fallback: 如果 DOMContentLoaded 没触发 loadTree
+setTimeout(function() {
+    if (!document.getElementById('pageTree').innerHTML) { loadTree(); }
+}, 500);
+
+window.addEventListener('load', function() {
+    if (!document.getElementById('pageTree').innerHTML) { loadTree(); }
+});
+
+function loadTree() {
+    fetch('/wiki/api/pages').then(r => r.json()).then(pages => {
+        allPages = pages;
+        document.getElementById('pageTree').innerHTML = renderTree(buildTree(pages));
+    });
+}
+
+function buildTree(pages, parentId) {
+    if (parentId === undefined) parentId = null;
+    return pages.filter(p => p.parent_id === parentId).sort((a,b) => (a.sort_order||0)-(b.sort_order||0)).map(p => ({...p, children: buildTree(pages, p.id)}));
+}
+
+function renderTree(nodes, depth) {
+    if (depth === undefined) depth = 0;
+    return nodes.map(n => {
+        const c = n.children && n.children.length > 0;
+        return '<div class="tree-node"><div class="tree-item '+(n.slug===currentPageSlug?'active':'')+'" style="--depth:'+depth+'"><a href="/wiki/?page='+n.slug+'">'
+            +'<span class="icon">'+(c?'📁':'📄')+'</span>'
+            +'<span class="title">'+escapeHtml(n.title)+'</span>'
+            +'<span class="tree-actions">'
+            +'<span class="tree-action" onclick="event.stopPropagation();addSubPage(\''+n.slug+'\');return false" title="新建子页面">+</span>'
+            +'</span></div>'
+            +(c?renderTree(n.children,depth+1):'')+'</div>';
+    }).join('');
+}
+
+function navigatePage(slug) {
+    currentPageSlug = slug;
+    // AJAX 加载页面内容，避免页面跳转丢失 cookie
+    // 公开页面使用 public API（不需要登录）
+    const PUBLIC_SLUGS = ['architecture', 'arch'];
+    const apiPrefix = PUBLIC_SLUGS.includes(slug) ? '/wiki/api/pages/' : '/wiki/api/pages/';
+    const apiUrl = PUBLIC_SLUGS.includes(slug) ? ('/wiki/api/pages/' + encodeURIComponent(slug) + '/public') : ('/wiki/api/pages/' + encodeURIComponent(slug));
+    fetch(apiUrl).then(r => {
+        if (r.status === 401) { window.location.href = '/wiki/login'; return; }
+        return r.json();
+    }).then(page => {
+        if (!page) return;
+        if (page.error) { toast(page.error, 'error'); return; }
+        // 更新面包屑
+        document.getElementById('breadcrumb').innerHTML = '<a href="#" onclick="navigatePage(\'home\')">Wiki</a> <span> / </span><span>' + escapeHtml(page.title) + '</span>';
+        document.title = page.title + ' - Wiki';
+        // 更新页面内容
+        document.getElementById('viewMode').innerHTML = '<div class="page-content">' + (page.content_html || '') + '</div>'
+            + '<div class="page-meta"><span>创建于: ' + page.created_at + '</span><span>更新于: ' + page.updated_at + '</span></div>';
+        document.getElementById('btnEdit').disabled = false;
+        document.getElementById('btnHistory').disabled = false;
+        document.getElementById('btnPerms').disabled = false;
+        document.getElementById('btnDelete').disabled = false;
+        // 更新 tree 高亮
+        document.querySelectorAll('.tree-item').forEach(i => i.classList.remove('active'));
+        document.querySelectorAll('.tree-item').forEach(i => {
+            if (i.getAttribute('data-slug') === slug) i.classList.add('active');
+        });
+        // 隐藏编辑模式
+        document.getElementById('editMode').style.display = 'none';
+        document.getElementById('viewMode').style.display = '';
+    }).catch(e => { toast('加载失败: ' + e.message, 'error'); });
+}
+
+function loadPageContent(slug) {
+    // 初始页面加载（已有服务端渲染的页面内容，只需更新 tree 高亮）
+    currentPageSlug = slug || 'home';
+    document.querySelectorAll('.tree-item').forEach(i => {
+        if (i.getAttribute('data-slug') === currentPageSlug) i.classList.add('active');
+    });
+}
+function logout() { window.location.href = window.location.origin + "/wiki/logout"; }
+function filterTree(q) {
+    document.querySelectorAll('.tree-item').forEach(i => {
+        const t = i.querySelector('.title')?.textContent?.toLowerCase()||'';
+        i.parentElement.style.display = !q || t.includes(q.toLowerCase()) ? '' : 'none';
+    });
+}
+
+function showCreatePage() {
+    try {
+        document.getElementById('newTitle').value = '';
+        document.getElementById('newSlug').value = '';
+        const sel = document.getElementById('newParent');
+        if (!sel) { console.error('newParent not found'); return; }
+        sel.innerHTML = '<option value="">根目录</option>';
+        allPages.forEach(p => { sel.innerHTML += '<option value="'+p.id+'">'+escapeHtml(p.title)+'</option>'; });
+        const m = document.getElementById('createModal');
+        if (!m) { console.error('createModal not found'); return; }
+        showModal('createModal');
+        setTimeout(() => document.getElementById('newTitle').focus(), 100);
+    } catch(e) {
+        console.error('showCreatePage error:', e);
+    }
+}
+
+function addSubPage(slug) {
+    const p = allPages.find(x => x.slug === slug);
+    if (!p) { console.warn('addSubPage: parent not found for slug', slug); return; }
+    showCreatePage();
+    var sel = document.getElementById('newParent');
+    if (sel) sel.value = String(p.id);
+}
+
+// 点击 modal-overlay 背景关闭弹窗（使用 click 事件 + 时间戳隔离，避免弹窗刚打开就被关闭）
+var _modalLastOpen = 0;
+document.addEventListener('click', function(e) {
+    if(e.target.classList.contains('modal-overlay')) {
+        // 如果弹窗打开在 300ms 内，忽略这个点击（避免弹窗打开事件和点击事件冲突）
+        if (Date.now() - _modalLastOpen < 300) return;
+        e.target.classList.remove('show');
+    }
+});
+
+function createPage() {
+    const title = document.getElementById('newTitle').value.trim();
+    if (!title) { toast('请输入页面标题','error'); return; }
+    fetch('/wiki/api/pages', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+        title, slug: document.getElementById('newSlug').value.trim()||undefined,
+        parent_id: document.getElementById('newParent').value||null, content: ''
+    })}).then(r=>r.json()).then(res => {
+        if (res.ok) { toast('页面已创建','success'); closeModal('createModal'); loadTree(); navigatePage(res.slug); }
+        else toast(res.error,'error');
+    });
+}
+
+function editPage() {
+    if (!currentPageSlug) return;
+    var vm = document.getElementById('viewMode');
+    var em = document.getElementById('editMode');
+    // 保存滚动位置（从 viewMode 的 scrollTop 取，因为它是滚动容器）
+    var scrollPos = vm.scrollTop;
+    
+    // 把 viewMode 内容注入编辑器
+    var contentHtml = vm.querySelector('.page-content');
+    var ed = document.getElementById('editor');
+    if (contentHtml) {
+        ed.innerHTML = contentHtml.innerHTML;
+    } else {
+        ed.innerHTML = '';
+    }
+    
+    // 切换显示
+    vm.style.display = 'none';
+    em.style.display = '';
+    
+    // 恢复滚动位置到 editMode 容器
+    em.scrollTop = scrollPos;
+    
+    // 额外 RAF 补偿（应对重排延迟）
+    var restoreScroll = function(n) {
+        em.scrollTop = scrollPos;
+        if (n > 0) requestAnimationFrame(function() { restoreScroll(n-1); });
+        else ed.focus();
+    };
+    requestAnimationFrame(function() { restoreScroll(3); });
+    setupTableContextMenu();
+    setupImageResize();
+}
+
+function cancelEdit() {
+    var vm = document.getElementById('viewMode');
+    var em = document.getElementById('editMode');
+    var scrollPos = em.scrollTop;
+    em.style.display = 'none';
+    vm.style.display = '';
+    vm.scrollTop = scrollPos;
+    var restoreScroll = function(n) {
+        vm.scrollTop = scrollPos;
+        if (n > 0) requestAnimationFrame(function() { restoreScroll(n-1); });
+    };
+    requestAnimationFrame(function() { restoreScroll(3); });
+}
+
+function savePage() {
+    const ed = document.getElementById('editor');
+    // 从 contenteditable 取 HTML 内容
+    const contentHtml = ed.innerHTML.trim();
+    // 提取文字作为 Markdown content（简化：直接存 HTML，后端按内容类型处理）
+    const summary = document.getElementById('editSummary').value.trim();
+    // 从第一个 h1 提取标题
+    const m = contentHtml.match(/<h1>([^<]+)<\/h1>/i);
+    const title = m ? m[1].trim() : currentPageSlug;
+    
+    fetch('/wiki/api/pages/'+currentPageSlug, {
+        method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+            title: title,
+            content_html: contentHtml,
+            summary: summary
+        })
+    })
+    .then(r=>r.json()).then(res => {
+        if (res.ok) {
+            toast('已保存 (v'+res.version+')','success');
+            cancelEdit();
+            // 保存当前滚动位置
+            var _savedScrollY = window.scrollY;
+            // 局部刷新 viewMode 内容，不整页跳转
+            fetch('/wiki/api/pages/'+encodeURIComponent(currentPageSlug)).then(r=>r.json()).then(function(page) {
+                if (!page.error) {
+                    var vm = document.getElementById('viewMode');
+                    vm.innerHTML = '<div class="page-content">' + (page.content_html || '') + '</div>'
+                        + '<div class="page-meta"><span>创建于: ' + page.created_at + '</span><span>更新于: ' + page.updated_at + '</span></div>';
+                    window.scrollTo(0, _savedScrollY);
+                }
+            });
+            // 更新面包屑标题
+            var bc = document.getElementById('breadcrumb');
+            if (bc) bc.innerHTML = '<a href="#" onclick="navigatePage(&#39;home&#39;)">Wiki</a> <span> / </span><span>' + escapeHtml(title) + '</span>';
+            document.title = title + ' - Wiki';
+            // 启用按钮
+            document.getElementById('btnEdit').disabled = false;
+            document.getElementById('btnHistory').disabled = false;
+            document.getElementById('btnPerms').disabled = false;
+            document.getElementById('btnDelete').disabled = false;
+        }
+        else toast(res.error,'error');
+    });
+}
+
+/* 工具栏操作：在光标位置/选区套标签 */
+function wrapTag(tag) {
+    document.execCommand('formatBlock', false, '<'+tag+'>');
+}
+function insertUnorderedList() { document.execCommand('insertUnorderedList'); }
+function insertOrderedList() { document.execCommand('insertOrderedList'); }
+function insertHr() { document.execCommand('insertHorizontalRule'); }
+/* 表格插入：打开弹窗选择行列数 */
+function insertTable() {
+    document.getElementById('tableRows').value = 3;
+    document.getElementById('tableCols').value = 3;
+    updateTablePreview();
+    openModal('tableModal');
+}
+
+function openModal(id) {
+    document.getElementById(id).classList.add('show');
+}
+
+function updateTablePreview() {
+    const rows = parseInt(document.getElementById('tableRows').value) || 1;
+    const cols = parseInt(document.getElementById('tableCols').value) || 1;
+    let html = '<table style="border-collapse:collapse;">';
+    for (let r = 0; r < rows; r++) {
+        html += '<tr>';
+        for (let c = 0; c < cols; c++) {
+            const label = String.fromCharCode(65 + c) + (r+1);
+            html += '<td style="padding:6px;border:1px solid #ccc;text-align:center;font-size:13px;color:#666;">' + label + '</td>';
+        }
+        html += '</tr>';
+    }
+    html += '</table>';
+    document.getElementById('tablePreview').innerHTML = html;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const rowsInput = document.getElementById('tableRows');
+    const colsInput = document.getElementById('tableCols');
+    if (rowsInput) rowsInput.addEventListener('input', updateTablePreview);
+    if (colsInput) colsInput.addEventListener('input', updateTablePreview);
+});
+
+/* 确认插入表格 */
+function confirmInsertTable() {
+    const rows = parseInt(document.getElementById('tableRows').value) || 1;
+    const cols = parseInt(document.getElementById('tableCols').value) || 1;
+    if (!rows || !cols || rows < 1 || cols < 1) {
+        toast('行数和列数必须大于0','error');
+        return;
+    }
+    closeModal('tableModal');
+    let html = '<div class="table-wrap" style="overflow-x:auto;margin:12px 0;"><table style="border-collapse:collapse;border:1px solid #ccc;">';
+    for (let r = 0; r < rows; r++) {
+        html += '<tr>';
+        for (let c = 0; c < cols; c++) {
+            const tag = (r === 0) ? 'th' : 'td';
+            html += '<' + tag + ' style="padding:8px;border:1px solid #ccc;min-height:28px;"><br></' + tag + '>';
+        }
+        html += '</tr>';
+    }
+    html += '</table></div>';
+    // 用 Selection API 插入
+    try {
+        const ed = document.getElementById('editor');
+        ed.focus();
+        // 将光标定位到编辑器末尾
+        const sel = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(ed);
+        range.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(range);
+        const fragment = range.createContextualFragment(html);
+        range.deleteContents();
+        range.insertNode(fragment);
+        range.setStartAfter(fragment);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+    } catch(e) {
+        console.error('insert table error:', e);
+        toast('插入表格失败: ' + e.message, 'error');
+    }
+    // 给表格加右键菜单（插入行/列）
+    setupTableContextMenu();
+    toast('表格已插入 ('+rows+'×'+cols+')','success');
+}
+
+/* 图片拖拽缩放 */
+function setupImageResize() {
+    var ed = document.getElementById('editor');
+    if (!ed) return;
+    // 清除旧的手柄（防止重复）
+    ed.querySelectorAll('.img-resize-handle').forEach(function(h){h.remove();});
+    ed.querySelectorAll('img').forEach(function(img) {
+        if (img.closest('.img-resize-wrap')) return; // 已有包裹
+        img.classList.add('img-resizing');
+        // 用包裹容器，右下角加手柄
+        var wrap = document.createElement('span');
+        wrap.className = 'img-resize-wrap';
+        wrap.style.cssText = 'display:inline-block;position:relative;line-height:0;';
+        img.parentElement.insertBefore(wrap, img);
+        wrap.appendChild(img);
+        
+        var handle = document.createElement('span');
+        handle.className = 'img-resize-handle';
+        handle.style.cssText = 'position:absolute;right:-6px;bottom:-6px;width:16px;height:16px;cursor:se-resize;z-index:10;background:#3498db;border:2px solid white;border-radius:2px;box-shadow:0 1px 3px rgba(0,0,0,0.3);';
+        wrap.appendChild(handle);
+        
+        // 边框提示
+        var showBorder = function(){wrap.style.outline='2px solid #3498db';wrap.style.outlineOffset='1px';};
+        var hideBorder = function(){wrap.style.outline='';};
+        wrap.addEventListener('mouseenter', showBorder);
+        wrap.addEventListener('mouseleave', hideBorder);
+        
+        // 拖拽逻辑
+        (function(img, wrap, handle) {
+            var dragging = false, startX, startY, startW, startH, ratio;
+            
+            handle.addEventListener('mousedown', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                dragging = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                startW = img.offsetWidth || img.naturalWidth;
+                startH = img.offsetHeight || img.naturalHeight;
+                ratio = startH / startW;
+                wrap.style.outline = '2px solid #3498db';
+                wrap.style.outlineOffset = '1px';
+            });
+            
+            document.addEventListener('mousemove', function(e) {
+                if (!dragging) return;
+                var dx = e.clientX - startX;
+                var dy = e.clientY - startY;
+                var newW = Math.max(50, Math.min(1200, startW + Math.max(dx, dy * (startW/startH || 1))));
+                var newH = Math.round(newW * ratio);
+                img.style.width = newW + 'px';
+                img.style.height = newH + 'px';
+            });
+            
+            document.addEventListener('mouseup', function() {
+                dragging = false;
+            });
+        })(img, wrap, handle);
+    });
+}
+
+/* 右键菜单 — 插入行/列 */
+let tableContextTarget = null;
+
+function setupTableContextMenu() {
+    const ed = document.getElementById('editor');
+    // 阻止默认右键菜单，显示自定义菜单
+    ed.addEventListener('contextmenu', function(e) {
+        let td = e.target;
+        while (td && td.tagName !== 'TD' && td.tagName !== 'TH') td = td.parentElement;
+        if (!td || !td.closest('table')) return;
+        e.preventDefault();
+        tableContextTarget = td;
+        showTableContextMenu(e.pageX, e.pageY);
+    });
+    // 双击 th 选中整列
+    ed.addEventListener('dblclick', function(e) {
+        const th = e.target.closest('th');
+        if (!th || !th.closest('table')) return;
+        const table = th.closest('table');
+        const colIdx = Array.from(th.parentElement.children).indexOf(th);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        table.querySelectorAll('tr').forEach(function(tr) {
+            const cell = tr.children[colIdx];
+            if (cell) {
+                const range = document.createRange();
+                range.selectNodeContents(cell);
+                sel.addRange(range);
+            }
+        });
+        // 选中后直接上色更方便，不过用户可以先选再手动点颜色
+    });
+}
+
+let contextMenuEl = null;
+function showTableContextMenu(x, y) {
+    hideTableContextMenu();
+    const menu = document.createElement('div');
+    menu.id = 'tableCtxMenu';
+    menu.style.cssText = 'position:fixed;left:'+x+'px;top:'+y+'px;background:#fff;border:1px solid #ddd;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.15);z-index:2000;padding:4px;font-size:13px;visibility:hidden;';
+    const items = [
+        { label: '⬆ 上方插入行', action: 'insertRowAbove' },
+        { label: '⬇ 下方插入行', action: 'insertRowBelow' },
+        { label: '⬅ 左侧插入列', action: 'insertColLeft' },
+        { label: '➡ 右侧插入列', action: 'insertColRight' },
+        { label: '—', action: 'sep' },
+        { label: '🔲 选中整列', action: 'selectColumn' },
+        { label: '🎨 设置单元格背景', action: 'setCellBg' },
+        { label: '🗑 删除行', action: 'deleteRow' },
+        { label: '🗑 删除列', action: 'deleteCol' },
+    ];
+    items.forEach(item => {
+        if (item.action === 'sep') {
+            const sep = document.createElement('div');
+            sep.style.cssText = 'height:1px;background:#eee;margin:4px 0;';
+            menu.appendChild(sep);
+            return;
+        }
+        const btn = document.createElement('div');
+        btn.textContent = item.label;
+        btn.style.cssText = 'padding:6px 16px;cursor:pointer;border-radius:4px;';
+        btn.onmouseenter = () => btn.style.background = '#f0f4ff';
+        btn.onmouseleave = () => btn.style.background = '';
+        btn.onclick = () => { hideTableContextMenu(); tableAction(item.action); };
+        menu.appendChild(btn);
+    });
+    document.body.appendChild(menu);
+    contextMenuEl = menu;
+    // 测量菜单实际高度，如果超出屏幕则往上弹
+    const mh = menu.offsetHeight;
+    const winH = window.innerHeight;
+    const actualY = parseInt(menu.style.top);
+    if (actualY + mh > winH) {
+        menu.style.top = Math.max(8, winH - mh - 8) + 'px';
+    }
+    menu.style.visibility = 'visible';
+    // 点其他地方关闭
+    setTimeout(() => document.addEventListener('click', hideTableContextMenu, {once:true}), 10);
+}
+
+function hideTableContextMenu() {
+    if (contextMenuEl) { contextMenuEl.remove(); contextMenuEl = null; }
+}
+
+function tableAction(action) {
+    if (!tableContextTarget) return;
+    const table = tableContextTarget.closest('table');
+    if (!table) return;
+    const tds = Array.from(table.querySelectorAll('td, th'));
+    const tr = tableContextTarget.parentElement;
+    const tbody = tr.parentElement;
+    const rows = Array.from(tbody.rows);
+    const rowIdx = rows.indexOf(tr);
+    const cols = tds.filter(td => td.parentElement === tr);
+    const colIdx = cols.indexOf(tableContextTarget);
+    
+    if (action === 'insertRowAbove') {
+        const newRow = document.createElement('tr');
+        for (let c = 0; c < cols.length; c++) {
+            const td = document.createElement('td');
+            td.style.cssText = 'padding:8px;border:1px solid #ccc;';
+            td.innerHTML = '<br>';
+            newRow.appendChild(td);
+        }
+        tbody.insertBefore(newRow, tr);
+    } else if (action === 'insertRowBelow') {
+        const newRow = document.createElement('tr');
+        for (let c = 0; c < cols.length; c++) {
+            const td = document.createElement('td');
+            td.style.cssText = 'padding:8px;border:1px solid #ccc;';
+            td.innerHTML = '<br>';
+            newRow.appendChild(td);
+        }
+        if (rowIdx + 1 < rows.length) tbody.insertBefore(newRow, rows[rowIdx + 1]);
+        else tbody.appendChild(newRow);
+    } else if (action === 'insertColLeft') {
+        rows.forEach(r => {
+            const td = document.createElement('td');
+            td.style.cssText = 'padding:8px;border:1px solid #ccc;';
+            td.innerHTML = '<br>';
+            r.insertBefore(td, r.cells[colIdx]);
+        });
+    } else if (action === 'insertColRight') {
+        rows.forEach(r => {
+            const td = document.createElement('td');
+            td.style.cssText = 'padding:8px;border:1px solid #ccc;';
+            td.innerHTML = '<br>';
+            const next = r.cells[colIdx + 1];
+            if (next) r.insertBefore(td, next);
+            else r.appendChild(td);
+        });
+    } else if (action === 'selectColumn') {
+        // 选中整列
+        const colIdx = Array.from(tr.children).indexOf(tableContextTarget);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        rows.forEach(function(row) {
+            const cell = row.children[colIdx];
+            if (cell) {
+                const range = document.createRange();
+                range.selectNodeContents(cell);
+                sel.addRange(range);
+            }
+        });
+        toast('已选中第'+(colIdx+1)+'列','info');
+    } else if (action === 'setCellBg') {
+        const color = prompt('输入背景色（如 #ffffcc、lightblue）：', '#ffffcc');
+        if (color) tableContextTarget.style.backgroundColor = color;
+    } else if (action === 'deleteRow') {
+        if (rows.length <= 1) { toast('至少保留一行','info'); return; }
+        tr.remove();
+    } else if (action === 'deleteCol') {
+        if (cols.length <= 1) { toast('至少保留一列','info'); return; }
+        rows.forEach(r => { r.cells[colIdx].remove(); });
+    }
+}
+
+/* 表格行号开关 */
+let rowNumbersVisible = false;
+function toggleRowNumbers() {
+    rowNumbersVisible = !rowNumbersVisible;
+    const btn = document.getElementById('rowNumBtn');
+    const editor = document.getElementById('editor');
+    const tables = editor.querySelectorAll('table');
+    if (rowNumbersVisible) {
+        btn.style.color = '#1976d2';
+        btn.style.borderColor = '#1976d2';
+    } else {
+        btn.style.color = '#999';
+        btn.style.borderColor = 'transparent';
+    }
+    tables.forEach(function(table) {
+        const rows = table.querySelectorAll('tr');
+        rows.forEach(function(tr, idx) {
+            let existing = tr.querySelector('td.row-num, th.row-num');
+            if (rowNumbersVisible) {
+                if (!existing) {
+                    const cell = document.createElement(tr.parentElement === table.querySelector('thead') ? 'th' : 'td');
+                    cell.className = 'row-num';
+                    cell.style.cssText = 'padding:4px 6px;border:1px solid #ccc;min-width:28px;text-align:center;color:#888;font-size:12px;background:#f9f9f9;';
+                    cell.textContent = idx + 1;
+                    tr.insertBefore(cell, tr.firstChild);
+                }
+            } else {
+                if (existing) existing.remove();
+            }
+        });
+    });
+    toast(rowNumbersVisible ? '行号已开启' : '行号已关闭', 'info');
+}
+
+/* 设置单元格背景色（工具栏用） */
+function setCellBg(color) {
+    const ed = document.getElementById('editor');
+    const sel = window.getSelection();
+    let colored = false;
+    // 先定位最近一个表单元格以便恢复滚动
+    let anchorCell = null;
+    // 方式1：从选区找所有被选中的 td/th
+    if (sel.rangeCount) {
+        for (let ri = 0; ri < sel.rangeCount; ri++) {
+            const range = sel.getRangeAt(ri);
+            const container = range.commonAncestorContainer;
+            // 收集选区中的所有 td/th（包括未完整高亮显示的）
+            const table = container.closest ? container.closest('table') : null;
+            if (table) {
+                const tds = table.querySelectorAll('td, th');
+                tds.forEach(function(td) {
+                    if (range.intersectsNode(td)) {
+                        td.style.backgroundColor = color;
+                        if (!anchorCell) anchorCell = td;
+                        colored = true;
+                    }
+                });
+            } else {
+                let td = container;
+                while (td && td.tagName !== 'TD' && td.tagName !== 'TH') td = td.parentElement;
+                if (td) {
+                    td.style.backgroundColor = color;
+                    if (!anchorCell) anchorCell = td;
+                    colored = true;
+                }
+            }
+        }
+    }
+    // 方式2：右键菜单
+    if (!colored && tableContextTarget && (tableContextTarget.tagName === 'TD' || tableContextTarget.tagName === 'TH')) {
+        tableContextTarget.style.backgroundColor = color;
+        anchorCell = tableContextTarget;
+        colored = true;
+    }
+    // 恢复滚动到目标单元格位置（不用 focus，focus 会导致页面跳动）
+    if (anchorCell) {
+        anchorCell.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+    if (!colored) toast('请将光标放在要设置颜色的单元格内','info');
+}
+
+/* 生成目录：从 h1-h4 提取标题生成层级列表 */
+function insertToc() {
+    const ed = document.getElementById('editor');
+    const headings = ed.querySelectorAll('h1,h2,h3,h4');
+    if (!headings.length) {
+        toast('页面中没有任何标题','info');
+        return;
+    }
+    let html = '<div class="wiki-toc" style="background:#f8f9fa;padding:16px 20px;border-radius:8px;margin:16px 0;">';
+    html += '<div style="font-weight:bold;font-size:16px;margin-bottom:10px;">📑 目录</div>';
+    for (const h of headings) {
+        const level = parseInt(h.tagName[1]);
+        const text = h.textContent.trim();
+        if (!text) continue;
+        // 给标题加个锚点 id
+        const id = 'toc-' + Math.random().toString(36).slice(2,8);
+        h.id = id;
+        html += '<div style="padding:2px 0;padding-left:' + ((level-1)*20) + 'px;font-size:' + (14-(level-1)) + 'px;">';
+        html += '<a href="#' + id + '" style="color:#2563eb;text-decoration:none;">' + escapeHtml(text) + '</a></div>';
+    }
+    html += '</div>';
+    document.execCommand('insertHTML', false, html);
+    toast('目录已生成','success');
+}
+
+/* 保存编辑器选区，用于颜色等操作 */
+let savedEditorRange = null;
+
+/* 编辑器失去焦点前保存选区 */
+document.addEventListener('DOMContentLoaded', function() {
+    const ed = document.getElementById('editor');
+    if (ed) {
+        ed.addEventListener('blur', function() {
+            const sel = window.getSelection();
+            if (sel.rangeCount > 0) savedEditorRange = sel.getRangeAt(0);
+        });
+    }
+});
+
+/* 预设颜色板 */
+const COLOR_PRESETS = [
+    '#e74c3c','#e67e22','#f1c40f','#2ecc71','#1abc9c','#3498db','#2980b9','#9b59b6',
+    '#34495e','#95a5a6','#c0392b','#d35400','#27ae60','#8e44ad'
+];
+
+function toggleColorPicker(e, type) {
+    e.stopPropagation();
+    const panel = document.getElementById('colorPicker' + (type === 'font' ? 'Font' : 'Cell'));
+    // 关闭其他面板
+    document.querySelectorAll('.color-picker-panel').forEach(p => { if(p !== panel) p.style.display = 'none'; });
+    if (panel.style.display !== 'block') {
+        if (!panel.children.length) {
+            let html = '<div style="display:flex;flex-wrap:wrap;gap:2px;">';
+            COLOR_PRESETS.forEach(c => {
+                html += '<div onclick="applyColor(\'' + c + '\',\'' + type + '\')" style="width:18px;height:18px;background:' + c + ';border:1px solid #ddd;border-radius:3px;cursor:pointer;" title="' + c + '"></div>';
+            });
+            html += '<div style="width:100%;padding:4px 0 0;border-top:1px solid #eee;margin-top:4px;"><input type="color" onchange="applyColor(this.value,\'" + type + "\')" style="width:100%;height:22px;border:none;cursor:pointer;"></div>';
+            html += '</div>';
+            panel.innerHTML = html;
+        }
+        panel.style.display = 'block';
+    } else {
+        panel.style.display = 'none';
+    }
+    // 点击其他地方关闭
+    setTimeout(() => {
+        document.addEventListener('click', function closePicker(ev) {
+            if (!ev.target.closest('.color-picker-wrap')) {
+                panel.style.display = 'none';
+                document.removeEventListener('click', closePicker);
+            }
+        }, {once: false});
+    }, 10);
+}
+
+function applyColor(color, type) {
+    document.querySelectorAll('.color-picker-panel').forEach(p => p.style.display = 'none');
+    // 恢复编辑器焦点和选区
+    const ed = document.getElementById('editor');
+    ed.focus();
+    if (savedEditorRange) {
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(savedEditorRange);
+        savedEditorRange = null;
+    }
+    // 延迟执行，等焦点恢复
+    setTimeout(function() {
+        if (type === 'font') {
+            document.execCommand('foreColor', false, color);
+        } else if (type === 'cell') {
+            setCellBg(color);
+        }
+    }, 50);
+}
+
+function escapeHtml(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+}
+
+function handlePaste(e) {
+    for (const item of e.clipboardData.items) {
+        if (item.type.startsWith('image/')) {
+            e.preventDefault();
+            uploadImage(item.getAsFile());
+            return;
+        }
+    }
+}
+
+function uploadImage(file) {
+    const fd = new FormData(); fd.append('file', file);
+    toast('上传中...');
+    fetch('/wiki/api/upload',{method:'POST',body:fd}).then(r=>r.json()).then(res=>{
+        if (res.ok) {
+            // 在 contenteditable 末尾插入图片
+            const ed = document.getElementById('editor');
+            const img = document.createElement('img');
+            img.src = res.url;
+            img.alt = '';
+            ed.appendChild(img);
+            // 加个换行以便继续输入
+            ed.appendChild(document.createElement('br'));
+            toast('图片已插入','success');
+        }
+        else toast(res.error,'error');
+    });
+}
+
+function deletePage() {
+    if (!currentPageSlug || !confirm('确定删除此页面？')) return;
+    fetch('/wiki/api/pages/'+currentPageSlug,{method:'DELETE'}).then(r=>r.json()).then(()=>{ toast('已删除','success'); navigatePage('home'); });
+}
+
+function showPermissions() {
+    if (!currentPageSlug) return;
+    fetch('/wiki/api/pages/'+currentPageSlug).then(r=>r.json()).then(page=>{
+        if (page.error) { toast(page.error,'error'); return; }
+        fetch('/wiki/api/permissions/'+page.id).then(r=>r.json()).then(perms=>{
+            let html = '<div style="margin-bottom:12px;"><strong>'+escapeHtml(page.title)+'</strong> 的权限设置</div>';
+            html += '<div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;"><select id="permUser" style="flex:1;padding:6px;border:1px solid #ddd;border-radius:4px;">';
+            USERS_JSON.forEach(u => { html += '<option value="'+u.id+'">'+escapeHtml(u.display_name||u.username)+'</option>'; });
+            html += '</select><select id="permLevel" style="padding:6px;border:1px solid #ddd;border-radius:4px;">'
+                + '<option value="read">只读</option><option value="write">读写</option><option value="admin">管理</option>'
+                + '</select><button class="tool-btn primary" onclick="addPermission('+page.id+')">添加</button></div><div id="permList">';
+            const L = {read:'📖 只读', write:'✏️ 读写', admin:'🔧 管理'};
+            if (perms.length===0) html += '<div style="color:#888;padding:12px;">暂未设置权限（管理员拥有所有权限）</div>';
+            else perms.forEach(p => { html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #eee;"><span>'+escapeHtml(p.display_name||p.username)+' — '+(L[p.permission]||p.permission)+'</span><button class="tool-btn" onclick="removePermission('+p.id+')" style="font-size:12px;padding:2px 8px;">移除</button></div>'; });
+            html += '</div>';
+            document.getElementById('permBody').innerHTML = html;
+            showModal('permModal');
+        });
+    });
+}
+
+function addPermission(pageId) {
+    fetch('/wiki/api/permissions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+        page_id: pageId, user_id: parseInt(document.getElementById('permUser').value),
+        permission: document.getElementById('permLevel').value
+    })}).then(r=>r.json()).then(res=>{ if(res.ok){ toast('权限已更新','success'); showPermissions(); } else toast(res.error,'error'); });
+}
+
+function removePermission(permId) {
+    fetch('/wiki/api/permissions/'+permId,{method:'DELETE'}).then(()=>{ toast('权限已移除','success'); showPermissions(); });
+}
+
+function showHistory() {
+    if (!currentPageSlug) return;
+    fetch('/wiki/api/pages/'+currentPageSlug+'/history').then(r=>r.json()).then(history=>{
+        let html = '';
+        if (history.length===0) html = '<div style="color:#888;padding:12px;">暂无历史记录</div>';
+        else history.forEach(h=>{
+            html += '<div class="history-item"><div style="display:flex;justify-content:space-between;"><span><strong>v'+h.version+'</strong> — '+escapeHtml(h.summary||'无摘要')+'</span><span style="color:#888;">'+h.edited_at+'</span></div><div style="color:#888;font-size:12px;">'+escapeHtml(h.display_name||h.username)+'</div></div>';
+        });
+        document.getElementById('historyBody').innerHTML = html;
+        showModal('historyModal');
+    });
+}
+
+function showUserManager() {
+    fetch('/wiki/api/users').then(r=>r.json()).then(users=>{
+        let html = '<div style="margin-bottom:16px;"><h4 style="margin-bottom:12px;">创建新用户</h4>'
+            + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+            + '<input type="text" id="newUserName" placeholder="用户名" style="padding:8px;border:1px solid #ddd;border-radius:4px;">'
+            + '<input type="password" id="newUserPass" placeholder="密码（>=6位）" style="padding:8px;border:1px solid #ddd;border-radius:4px;">'
+            + '<input type="text" id="newUserDisplay" placeholder="显示名称（可选）" style="padding:8px;border:1px solid #ddd;border-radius:4px;">'
+            + '<label style="display:flex;align-items:center;gap:6px;font-size:13px;"><input type="checkbox" id="newUserAdmin"> 管理员</label>'
+            + '</div><button class="tool-btn primary" onclick="createUser()" style="margin-top:8px;">创建用户</button></div>'
+            + '<hr style="border:none;border-top:1px solid #eee;margin:12px 0;"><h4 style="margin-bottom:8px;">用户列表</h4>';
+        users.forEach(u => {
+            var isSelf = u.id === currentUserId;
+            html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #eee;">'
+                + '<div><strong>'+escapeHtml(u.display_name||u.username)+'</strong> <span style="color:#888;font-size:12px;margin-left:8px;">@'+u.username+'</span>'
+                +(u.is_admin?'<span style="background:#e8f4fd;color:#2980b9;padding:2px 8px;border-radius:10px;font-size:11px;margin-left:6px;">管理员</span>':'')+'</div>'
+                + '<div><button class="tool-btn" onclick="editUserForm('+u.id+',\''+escapeHtml(u.username)+'\',\''+escapeHtml(u.display_name||u.username)+'\','+(u.is_admin?1:0)+')" style="font-size:12px;padding:2px 8px;margin-right:4px;">编辑</button><span style="color:#888;font-size:12px;">'+u.created_at+'</span></div></div>';
+        });
+        html += '<div style="margin-top:16px;padding:12px;background:#f9f9f9;border-radius:6px;">'
+            + '<h4 style="margin-bottom:8px;">我的密码</h4>'
+            + '<div style="display:flex;gap:8px;"><input type="password" id="myOldPass" placeholder="旧密码" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:4px;">'
+            + '<input type="password" id="myNewPass" placeholder="新密码（>=6位）" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:4px;"></div>'
+            + '<button class="tool-btn primary" onclick="changeMyPassword()" style="margin-top:8px;">修改密码</button></div>';
+        document.getElementById('userBody').innerHTML = html;
+        showModal('userModal');
+    });
+}
+
+function createUser() {
+    const username = document.getElementById('newUserName').value.trim();
+    const password = document.getElementById('newUserPass').value;
+    if (!username) { toast('请输入用户名','error'); return; }
+    if (password.length < 6) { toast('密码至少6位','error'); return; }
+    fetch('/wiki/api/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+        username, password, display_name: document.getElementById('newUserDisplay').value.trim()||username,
+        is_admin: document.getElementById('newUserAdmin').checked ? 1 : 0
+    })}).then(r=>r.json()).then(res=>{ if(res.ok){ toast('用户已创建','success'); showUserManager(); } else toast(res.error,'error'); });
+}
+
+function editUserForm(id, username, displayName, isAdmin) {
+    var newDn = prompt('显示名称 ('+username+'):', displayName);
+    if (newDn === null) return;
+    var newPw = prompt('新密码（留空不修改）:');
+    if (newPw === null) return;
+    var data = { display_name: newDn.trim() || displayName };
+    if (newPw && newPw.length >= 6) data.password = newPw;
+    fetch('/wiki/api/users/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
+    .then(r=>r.json()).then(res=>{ if(res.ok) { toast('用户已更新','success'); showUserManager(); } else toast(res.error,'error'); });
+}
+
+function changeMyPassword() {
+    var oldPw = document.getElementById('myOldPass').value;
+    var newPw = document.getElementById('myNewPass').value;
+    if (!oldPw) { toast('请输入旧密码','error'); return; }
+    if (newPw.length < 6) { toast('新密码至少6位','error'); return; }
+    var form = new FormData();
+    form.append('old_password', oldPw);
+    form.append('new_password', newPw);
+    fetch('/wiki/change-password',{method:'POST',body:form}).then(r=>r.json()).then(res=>{
+        if(res.ok) { toast('密码已修改','success'); document.getElementById('myOldPass').value=''; document.getElementById('myNewPass').value=''; }
+        else toast(res.error,'error');
+    });
+}
+
+function showModal(id) {
+    _modalLastOpen = Date.now();
+    document.getElementById(id).classList.add('show');
+}
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+function escapeHtml(s) { if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/* 隐藏侧边栏（读者模式） */
+function toggleSidebar() {
+    var c = document.body.classList;
+    var h = c.toggle('sidebar-collapsed');
+    localStorage.setItem('wiki-sidebar', h ? 'hidden' : 'visible');
+    var btn = document.getElementById('sidebarToggle');
+    if (btn) btn.textContent = h ? '☰ 导航' : '▤ 收起';
+}
+document.addEventListener('DOMContentLoaded', function() {
+    if (localStorage.getItem('wiki-sidebar') === 'hidden') {
+        document.body.classList.add('sidebar-collapsed');
+        var btn = document.getElementById('sidebarToggle');
+        if (btn) btn.textContent = '☰ 导航';
+    }
+});
+function toast(msg,type) { const el=document.getElementById('toast'); el.textContent=msg; el.className='toast '+(type||''); el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),3000); }
+</script>
+</body>
+</html>

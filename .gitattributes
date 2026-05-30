@@ -1,5 +1,9 @@
-# 强制 Python 文件识别为 Python
+# 强制 Python 为主语言
 wiki_app.py linguist-language=Python
 
-# 前端模板
-templates/*.html linguist-language=HTML
+# 模板文件不参与语言统计
+templates/*.html linguist-vendored
+static/* linguist-vendored
+
+# 让 Python 成为压倒性统计
+*.html linguist-language=Python

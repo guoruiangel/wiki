@@ -1,0 +1,5 @@
+# 强制 Python 文件识别为 Python
+wiki_app.py linguist-language=Python
+
+# 前端模板
+templates/*.html linguist-language=HTML

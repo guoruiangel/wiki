@@ -564,6 +564,25 @@ def get_page_version(slug, version):
     
     return jsonify(dict(hist))
 
+@app.route('/wiki/api/pages/<slug>/rollback/<int:version>', methods=['POST'])
+def rollback_page(slug, version):
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT id FROM pages WHERE slug = ?", (slug,))
+    page = c.fetchone()
+    if not page: conn.close(); return jsonify({"error": "页面不存在"}), 404
+    c.execute("SELECT content, content_html FROM page_history WHERE page_id = ? AND version = ?", (page['id'], version))
+    hist = c.fetchone()
+    if not hist: conn.close(); return jsonify({"error": "版本不存在"}), 404
+    new_c = hist['content'] if hist['content'] and hist['content'].strip() else hist['content_html']
+    c.execute("UPDATE pages SET content = ?, content_html = ?, updated_at = datetime('now') WHERE id = ?", (new_c, hist['content_html'], page['id']))
+    c.execute("SELECT COALESCE(MAX(version), 0) + 1 FROM page_history WHERE page_id = ?", (page['id'],))
+    nv = c.fetchone()[0]
+    c.execute("INSERT INTO page_history (page_id, content, content_html, edited_by, version, summary, edited_at) VALUES (?, ?, ?, ?, ?, ?, datetime('now'))",
+              (page['id'], hist['content'], hist['content_html'], 1, nv, '回滚到版本 ' + str(version)))
+    conn.commit(); conn.close()
+    return jsonify({"ok": True, "version": nv, "rolled_back_to": version})
+
 @app.route('/wiki/api/pages', methods=['POST'])
 @login_required
 def create_page():
